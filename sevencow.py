@@ -41,6 +41,18 @@ def requests_error_handler(func):
             )
     return deco
 
+def expected_argument_type(pos, types):
+    def deco(func):
+        @functools.wraps(func)
+        def wrap(*args, **kwargs):
+            print 'args: ', args
+            if not isinstance(args[pos], types):
+                raise TypeError(
+                    "{0} Type error, Expected {1}".format(args[pos], types)
+                )
+            return func(*args, **kwargs)
+        return wrap
+    return deco
 
 
 class UploadToken(object):
@@ -82,8 +94,10 @@ class Cow(object):
         self.secret_key = secret_key
         self.upload_tokens = {}
         
-        self.stat = functools.partial(self._handler, 'stat')
-        self.delete = functools.partial(self._handler, 'delete')
+        self.stat = functools.partial(self._stat_rm_handler, 'stat')
+        self.delete = functools.partial(self._stat_rm_handler, 'delete')
+        self.copy = functools.partial(self._cp_mv_handler, 'copy')
+        self.move = functools.partial(self._cp_mv_handler, 'move')
 
 
     def generate_access_token(self, url, params=None):
@@ -113,7 +127,7 @@ class Cow(object):
         else:
             res = requests.post(url, headers=self.build_requests_headers(token))
         assert res.status_code == 200, res
-        return res.json()
+        return res.json() if res.text else ''
 
 
     def list_buckets(self):
@@ -123,7 +137,7 @@ class Cow(object):
 
     def create_bucket(self, name):
         """不建议使用API建立bucket
-        测试发现API建立的bucket默认无法设置<bucket name>.qiniudn.com的二级域名
+        测试发现API建立的bucket默认无法设置<bucket_name>.qiniudn.com的二级域名
         请直接到web界面建立
         """
         url = 'http://rs.qbox.me/mkbucket/' + name
@@ -133,11 +147,12 @@ class Cow(object):
     def generate_upload_token(self, scope, ttl=3600):
         if scope not in self.upload_tokens:
             self.upload_tokens[scope] = UploadToken(self.access_key, self.secret_key, scope, ttl=ttl)
-            print 'generate_upload_token'
         return self.upload_tokens[scope].token
 
 
+
     @requests_error_handler
+    @expected_argument_type(2, (basestring, list, tuple))
     def put(self, scope, filename):
         """上传文件
         filename 如果是字符串，表示上传单个文件，
@@ -150,7 +165,9 @@ class Cow(object):
             files = {
                 'file': (filename, open(filename, 'rb')),
             }
-            action = '/rs-put/%s' % urlsafe_b64encode('%s:%s' % (scope, os.path.basename( filename )))
+            action = '/rs-put/%s' % urlsafe_b64encode(
+                '%s:%s' % (scope, os.path.basename( filename ))
+            )
             _type, _encoding = mimetypes.guess_type(filename)
             if _type:
                 action += '/mimeType/%s' % urlsafe_b64encode(_type)
@@ -169,39 +186,57 @@ class Cow(object):
         if isinstance(filename, (list, tuple)):
             # 多文件
             return [_put(f) for f in filename]
-        
-        raise TypeError("put, filename should be string, list or tuple. Unsupported type: {0}".format(filename))
-
-
-    def cp(self, src_bucket, src_filename, des_bucket, des_filename):
-        url = 'http://rs.qbox.me/copy/%s/%s' % (urlsafe_b64encode('%s:%s' % (src_bucket, src_filename)), urlsafe_b64encode(des_bucket, des_filename))
-        return self.api_call(url)
-
-    def mv(self, src_bucket, src_filename, des_bucket, des_filename):
-        url = 'http://rs.qbox.me/move/%s/%s' % (urlsafe_b64encode('%s:%s' % (src_bucket, src_filename)), urlsafe_b64encode(des_bucket, des_filename))
-        return self.api_call(url)
 
 
 
-    def _handler(self, action, bucket, filename):
+    @expected_argument_type(2, (list, tuple))
+    def _cp_mv_handler(self, action, args):
+        # args: [src_bucket, src_filename, des_bucket, des_filename]
+        # or [(src_bucket, src_filename, des_bucket, des_filename), (), ...]
+        if isinstance(args[0], basestring):
+            return self._cp_mv_single(action, args)
+        if isinstance(args[0], (list, tuple)):
+            return self._cp_mv_batch(action, args)
+
+    @expected_argument_type(3, (basestring, list, tuple))
+    def _stat_rm_handler(self, action, bucket, filename):
         if isinstance(filename, basestring):
-            return self.single(action, bucket, filename)
+            return self._stat_rm_single(action, bucket, filename)
         if isinstance(filename, (list, tuple)):
-            return self.batch(action, bucket, filename)
-        raise TypeError(
-            "filename should be string, list or tuple."
-            "Unsupported type: {0}".format(filename)
+            return self._stat_rm_batch(action, bucket, filename)
+    
+    
+    
+    def _cp_mv_single(self, action, args):
+        src_bucket, src_filename, des_bucket, des_filename = args
+        url = '%s/%s/%s/%s' % (
+            RS_HOST,
+            action,
+            urlsafe_b64encode('%s:%s' % (src_bucket, src_filename)),
+            urlsafe_b64encode('%s:%s' % (des_bucket, des_filename)),
         )
+        return self.api_call(url)
+    
+    def _cp_mv_batch(self, action, args):
+        url = '%s/batch' % RS_HOST
+        def _one_param(arg):
+            return 'op=/%s/%s/%s' % (
+                action,
+                urlsafe_b64encode('%s:%s' % (arg[0], arg[1])),
+                urlsafe_b64encode('%s:%s' % (arg[2], arg[3])),
+            )
+        param = '&'.join( map(_one_param, args) )
+        return self.api_call(url, param)
 
 
-    def single(self, action, bucket, filename):
+    def _stat_rm_single(self, action, bucket, filename):
         url = '%s/%s/%s' % (
             RS_HOST, action, urlsafe_b64encode('%s:%s' % (bucket, filename))
         )
         return self.api_call(url)
 
 
-    def batch(self, action, bucket, filenames):
+    def _stat_rm_batch(self, action, bucket, filenames):
         url = '%s/batch' % RS_HOST
         param = [
             'op=/%s/%s' % (
