@@ -13,6 +13,9 @@ from hashlib import sha1
 
 import requests
 
+version_info = (0, 1, 0)
+VERSION = __version__ = '.'.join( map(str, version_info) )
+
 
 """
 Usage:
