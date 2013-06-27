@@ -21,7 +21,7 @@ from sevencow import Cow
 cow = Cow(<ACCESS_KEY>, <SECRET_KEY>)
 ```
 
-然后就可以通过 `cow.stat(<BUCKET>, <FILENAME>)` 来进行操作.
+然后就可以通过 `cow.stat(<BUCKET>, <FILENAME>)` 这样来进行操作.
 但为了简化操作，并且考虑到大多数都是在一个bucket中进行文件操作，
 所以建议再做一步：
 
@@ -29,7 +29,7 @@ cow = Cow(<ACCESS_KEY>, <SECRET_KEY>)
 b = cow.get_bucket(<BUCKET>)
 ```
 
-后面都用这个`b`对象来操作。 它代表了<BUCKET>
+后面都用这个`b`对象来操作。 它代表了`<BUCKET>`
 
 #### 上传，删除，查看文件信息
 
@@ -75,3 +75,18 @@ except CowException as e:
     print e.content     # api 错误的原因
 ```
 
+
+## 测试
+
+1.  首先从github clone项目到本地
+2.  测试需要三个环境变量
+
+    ```bash
+    export QINIU_ACCESS_KEY=<...>
+    export QINIU_SECRET_KEY=<...>
+    export QINIU_BUCKET=<...>
+    ```
+
+    `QINIU_BUCKET` 要先在web中建立
+
+3.  在项目目录中直接运行 `nosetests`
