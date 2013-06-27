@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
 
 import os
-from urlparse import urlparse
-from urllib import urlencode
-from base64 import urlsafe_b64encode
-from hashlib import sha1
-import functools
 import hmac
 import time
 import json
 import mimetypes
+import functools
+from urlparse import urlparse
+from urllib import urlencode
+from base64 import urlsafe_b64encode
+from hashlib import sha1
 
 import requests
 
 
 RS_HOST = 'http://rs.qbox.me'
-UP_HOST = 'http://up.qiniu.com'
+UP_HOST = 'http://up.qbox.me'
+RSF_HOST = 'http://rsf.qbox.me'
 
 
 class CowException(Exception): pass
@@ -45,7 +46,6 @@ def expected_argument_type(pos, types):
     def deco(func):
         @functools.wraps(func)
         def wrap(*args, **kwargs):
-            print 'args: ', args
             if not isinstance(args[pos], types):
                 raise TypeError(
                     "{0} Type error, Expected {1}".format(args[pos], types)
@@ -131,24 +131,43 @@ class Cow(object):
 
 
     def list_buckets(self):
-        url = 'http://rs.qbox.me/buckets'
-        res = self.api_call(url)
-        return res.json()
+        """列出所有的buckets"""
+        url = '%s/buckets' % RS_HOST
+        return self.api_call(url)
 
     def create_bucket(self, name):
         """不建议使用API建立bucket
         测试发现API建立的bucket默认无法设置<bucket_name>.qiniudn.com的二级域名
         请直接到web界面建立
         """
-        url = 'http://rs.qbox.me/mkbucket/' + name
-        res = self.api_call(url)
-        return res.status_code
+        url = '%s/mkbucket/%s' % (RS_HOST, name)
+        return self.api_call(url)
+
+
+    def drop_bucket(self, bucket):
+        """删除整个bucket"""
+        url = '%s/drop/%s' % (RS_HOST, bucket)
+        return self.api_call(url)
+
+
+    def list_files(self, bucket, marker=None, limit=None, prefix=None):
+        """列出bucket中的文件"""
+        query = ['bucket=%s' % bucket]
+        if marker:
+            query.append('marker=%s' % marker)
+        if limit:
+            query.append('limit=%s' % limit)
+        if prefix:
+            query.append('prefix=%s' % prefix)
+        url = '%s/list?%s' % (RSF_HOST, '&'.join(query))
+        return self.api_call(url)
+
 
     def generate_upload_token(self, scope, ttl=3600):
+        """上传文件的uploadToken"""
         if scope not in self.upload_tokens:
             self.upload_tokens[scope] = UploadToken(self.access_key, self.secret_key, scope, ttl=ttl)
         return self.upload_tokens[scope].token
-
 
 
     @requests_error_handler
@@ -158,7 +177,7 @@ class Cow(object):
         filename 如果是字符串，表示上传单个文件，
         如果是list或者tuple，表示上传多个文件
         """
-        url = 'http://up.qbox.me/upload'
+        url = '%s/upload' % UP_HOST
         token = self.generate_upload_token(scope)
         
         def _put(filename):
@@ -191,20 +210,34 @@ class Cow(object):
 
     @expected_argument_type(2, (list, tuple))
     def _cp_mv_handler(self, action, args):
-        # args: [src_bucket, src_filename, des_bucket, des_filename]
-        # or [(src_bucket, src_filename, des_bucket, des_filename), (), ...]
+        """copy move方法
+        action: 'copy' or 'move'
+        args: [src_bucket, src_filename, des_bucket, des_filename]
+        or [(src_bucket, src_filename, des_bucket, des_filename), (), ...]
+        args 第一种形式就是对一个文件进行操作，第二种形式是多个文件批量操作
+
+        用户不用直接调用这个方法
+        """
         if isinstance(args[0], basestring):
             return self._cp_mv_single(action, args)
         if isinstance(args[0], (list, tuple)):
             return self._cp_mv_batch(action, args)
 
+
     @expected_argument_type(3, (basestring, list, tuple))
     def _stat_rm_handler(self, action, bucket, filename):
+        """stat delete方法
+        action: 'stat' or 'delete'
+        bucket: 哪个bucket
+        filenmae: 'aabb' or ['aabb', 'ccdd', ...]
+        filename 第一种形式就是对一个文件进行操作，第二种形式是多个文件批量操作
+
+        用户不用直接调用这个方法
+        """
         if isinstance(filename, basestring):
             return self._stat_rm_single(action, bucket, filename)
         if isinstance(filename, (list, tuple)):
             return self._stat_rm_batch(action, bucket, filename)
-    
     
     
     def _cp_mv_single(self, action, args):
@@ -248,20 +281,6 @@ class Cow(object):
 
 
 
-    def drop_bucket(self, bucket):
-        url = 'http://rs.qbox.me/drop/%s' % bucket
-        return self.api_call(url)
-
-    def list(self, bucket, marker=None, limit=None, prefix=None):
-        query = ['bucket=%s' % bucket]
-        if marker:
-            query.append('marker=%s' % marker)
-        if limit:
-            query.append('limit=%s' % limit)
-        if prefix:
-            query.append('prefix=%s' % prefix)
-        url = 'http://rsf.qbox.me/list?%s' % '&'.join(query)
-        return self.api_call(url)
         
 
 import config
