@@ -66,9 +66,8 @@ class UploadToken(object):
 
     @property
     def token(self):
-        if int(time.time()) - self.generated > self.ttl:
-            # expired
-            # make new token
+        if int(time.time()) - self.generated > self.ttl - 60:
+            # 还有一分钟也认为过期了， make new token
             self._token = self._make_token()
         if not self._token:
             self._token = self._make_token()
@@ -286,6 +285,11 @@ class Cow(object):
         param = '&'.join(param)
         return self.api_call(url, param)
 
+
+
+
+
+
 def transform_argument(func):
     @functools.wraps(func)
     def deco(self, *args):
@@ -313,15 +317,14 @@ class Bucket(object):
 
     @transform_argument
     def copy(self, *args):
-        print 'copy args', args
         return self.cow.copy(self._build_cp_mv_args(args[0]))
         
     @transform_argument
     def move(self, *args):
         return self.cow.move(self._build_cp_mv_args(args[0]))
 
-    def list_files(self):
-        return self.cow.list_files(self.bucket)
+    def list_files(self, marker=None, limit=None, prefix=None):
+        return self.cow.list_files(self.bucket, marker=marker, limit=limit, prefix=prefix)
 
 
     def _build_cp_mv_args(self, filename):

@@ -1,6 +1,9 @@
 *.pyc
 *.swp
 *.bak
+*.jpg
+*.jpep
+*.png
 
 config.py
 env
