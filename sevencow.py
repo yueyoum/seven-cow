@@ -99,6 +99,13 @@ class Cow(object):
         self.copy = functools.partial(self._cp_mv_handler, 'copy')
         self.move = functools.partial(self._cp_mv_handler, 'move')
 
+    def get_bucket(self, bucket):
+        """对一个bucket的文件进行操作，
+        推荐使用此方法得到一个bucket对象,
+        然后对此bucket的操作就只用传递文件名即可
+        """
+        return Bucket(self, bucket)
+
 
     def generate_access_token(self, url, params=None):
         uri = urlparse(url)
@@ -279,9 +286,52 @@ class Cow(object):
         param = '&'.join(param)
         return self.api_call(url, param)
 
-
-
+def transform_argument(func):
+    @functools.wraps(func)
+    def deco(self, *args):
+        filename = args[0] if len(args) == 1 else args
+        return func(self, filename)
+    return deco
         
+
+class Bucket(object):
+    def __init__(self, cow, bucket):
+        self.cow = cow
+        self.bucket = bucket
+
+    @transform_argument
+    def put(self, *args):
+        return self.cow.put(self.bucket, args[0])
+
+    @transform_argument
+    def stat(self, *args):
+        return self.cow.stat(self.bucket, args[0])
+
+    @transform_argument
+    def delete(self, *args):
+        return self.cow.delete(self.bucket, args[0])
+
+    @transform_argument
+    def copy(self, *args):
+        print 'copy args', args
+        return self.cow.copy(self._build_cp_mv_args(args[0]))
+        
+    @transform_argument
+    def move(self, *args):
+        return self.cow.move(self._build_cp_mv_args(args[0]))
+
+    def list_files(self):
+        return self.cow.list_files(self.bucket)
+
+
+    def _build_cp_mv_args(self, filename):
+        if isinstance(filename[0], basestring):
+            args = [self.bucket, filename[0], self.bucket, filename[1]]
+        else:
+            args = []
+            for src, des in filename:
+                args.append( (self.bucket, src, self.bucket, des) )
+        return args
 
 import config
 cow = Cow(config.ACCESS_KEY, config.SECRET_KEY)
