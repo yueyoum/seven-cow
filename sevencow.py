@@ -14,6 +14,24 @@ from hashlib import sha1
 import requests
 
 
+"""
+Usage:
+cow = Cow(ACCESS_KEY, SECRET_KEY)
+b = cow.get_bucket(BUCKET)
+b.put('a')
+b.put('a', 'b')
+b.stat('a')
+b.stat('a', 'b')
+b.delete('a')
+b.delete('a', 'b')
+b.copy('a', 'c')
+b.copy(('a', 'c'), ('b', 'd'))
+b.move('a', 'c')
+b.move(('a', 'c'), ('b', 'd'))
+"""
+
+
+
 RS_HOST = 'http://rs.qbox.me'
 UP_HOST = 'http://up.qbox.me'
 RSF_HOST = 'http://rsf.qbox.me'
@@ -211,10 +229,8 @@ class Cow(object):
         if isinstance(filename, basestring):
             # 单个文件
             return _put(filename)
-        
-        if isinstance(filename, (list, tuple)):
-            # 多文件
-            return [_put(f) for f in filename]
+        # 多文件
+        return [_put(f) for f in filename]
 
 
 
@@ -340,5 +356,3 @@ class Bucket(object):
                 args.append( (self.bucket, src, self.bucket, des) )
         return args
 
-import config
-cow = Cow(config.ACCESS_KEY, config.SECRET_KEY)
