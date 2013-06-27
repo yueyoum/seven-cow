@@ -19,7 +19,13 @@ UP_HOST = 'http://up.qbox.me'
 RSF_HOST = 'http://rsf.qbox.me'
 
 
-class CowException(Exception): pass
+class CowException(Exception):
+    def __init__(self, url, status_code, reason, content):
+        self.url = url
+        self.status_code = status_code
+        self.reason = reason
+        self.content = content
+        Exception.__init__(self, '%s, %s' % (reason, content))
 
 
 
@@ -36,10 +42,8 @@ def requests_error_handler(func):
         except AssertionError as e:
             req = e.args[0]
             raise CowException(
-                "{0}: Url {1}, Status code {2}, Reason {3}, Content {4}".format(
-                    func.func_name, req.url, req.status_code, req.reason, req.content
+                    req.url, req.status_code, req.reason, req.content
                 )
-            )
     return deco
 
 def expected_argument_type(pos, types):
