@@ -36,6 +36,13 @@ class Test(object):
         assert key == res['key']
         assert key in self._list_file_names()
 
+    def testaPutSingleChangeName(self):
+        key = 'sevencow0'
+        name = 'sevencow0c'
+        res = self.b.put(key, names={key: name})
+        assert name == res['key']
+        assert name in self._list_file_names()
+
 
     def testbPutMulti(self):
         keys = self._multi_files()
@@ -46,6 +53,20 @@ class Test(object):
         files = self._list_file_names()
         for k in keys:
             assert k in files
+
+    def testbPutMultiChangeName(self):
+        keys = self._multi_files()
+        names = {}
+        for k in keys:
+            names[k] = '{0}cc'.format(k)
+        res = self.b.put(*keys, names=names)
+        res_keys = [r['key'] for r in res]
+        assert sorted(names.values()) == sorted(res_keys)
+
+        files = self._list_file_names()
+        for k in names.values():
+            assert k in files
+
 
     def testcStatSingle(self):
         self.b.stat('sevencow0')
@@ -82,7 +103,9 @@ class Test(object):
         assert 'sevencow0' not in self._list_file_names()
 
     def testjDeleteMulti(self):
-        keys = ['sevencow1', 'sevencow2', 'sevencow011', 'sevencow111', 'sevencow211']
+        keys = ['sevencow1', 'sevencow2', 'sevencow011', 'sevencow111', 'sevencow211',
+            'sevencow0c', 'sevencow0cc', 'sevencow1cc', 'sevencow2cc',
+        ]
         self.b.delete(*keys)
         files = self._list_file_names()
         for k in keys:
