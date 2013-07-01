@@ -13,7 +13,7 @@ from hashlib import sha1
 
 import requests
 
-version_info = (0, 1, 0)
+version_info = (0, 1, 2)
 VERSION = __version__ = '.'.join( map(str, version_info) )
 
 
@@ -23,6 +23,8 @@ cow = Cow(ACCESS_KEY, SECRET_KEY)
 b = cow.get_bucket(BUCKET)
 b.put('a')
 b.put('a', 'b')
+b.put('a', names={'a': 'x'})
+b.put('a', 'b', names={'a': 'x', 'b': 'y'})
 b.stat('a')
 b.stat('a', 'b')
 b.delete('a')

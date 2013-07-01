@@ -1,3 +1,8 @@
+3013-07-01
+
+*	Version 0.1.2
+*	Add names key words argument in put method for change uploaded file name
+
 2013-06-27
 
 *	Version 0.1.0, First release
