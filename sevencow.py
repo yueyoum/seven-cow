@@ -203,20 +203,27 @@ class Cow(object):
 
     @requests_error_handler
     @expected_argument_type(2, (basestring, list, tuple))
-    def put(self, scope, filename):
+    def put(self, scope, filename, names=None):
         """上传文件
         filename 如果是字符串，表示上传单个文件，
         如果是list或者tuple，表示上传多个文件
+
+        names 是dict，key为filename, value为上传后的名字
+        如果不设置，默认为文件名
         """
         url = '%s/upload' % UP_HOST
         token = self.generate_upload_token(scope)
+        names = names or {}
+
+        def _uploaded_name(filename):
+            return names.get(filename, None) or os.path.basename(filename)
         
         def _put(filename):
             files = {
                 'file': (filename, open(filename, 'rb')),
             }
             action = '/rs-put/%s' % urlsafe_b64encode(
-                '%s:%s' % (scope, os.path.basename( filename ))
+                '%s:%s' % (scope, _uploaded_name(filename))
             )
             _type, _encoding = mimetypes.guess_type(filename)
             if _type:
@@ -315,9 +322,9 @@ class Cow(object):
 
 def transform_argument(func):
     @functools.wraps(func)
-    def deco(self, *args):
+    def deco(self, *args, **kwargs):
         filename = args[0] if len(args) == 1 else args
-        return func(self, filename)
+        return func(self, filename, **kwargs)
     return deco
         
 
@@ -327,8 +334,9 @@ class Bucket(object):
         self.bucket = bucket
 
     @transform_argument
-    def put(self, *args):
-        return self.cow.put(self.bucket, args[0])
+    def put(self, *args, **kwargs):
+        names = kwargs.get('names', None)
+        return self.cow.put(self.bucket, args[0], names=names)
 
     @transform_argument
     def stat(self, *args):
