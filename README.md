@@ -31,6 +31,18 @@ b = cow.get_bucket(<BUCKET>)
 
 后面都用这个`b`对象来操作。 它代表了`<BUCKET>`
 
+#### 列出所有的bucket
+```python
+cow.list_buckets()
+```
+
+#### 列出一个bucket中的所有文件
+```python
+b.list_files()
+```
+这个方法还有 marker, limit, prefix这三个可选参数，详情参考官方文档
+
+
 #### 上传，删除，查看文件信息
 
 这三种是一类操作，因为只要提供文件名即可
@@ -42,6 +54,15 @@ b.stat('a')                 # 查看单个文件信息
 b.stat('a', 'b', 'c')       # 批量查看
 b.delete('a')               # 删除单个文件
 b.delete('a', 'b', 'c')     # 批量删除
+```
+
+默认情况下put上传是使用文件本身的名字作为上传后的名字(也就是在bucket中key)，
+但你也可以给put方法加一个`names`关键字参数来指定文件上传后应该是什么名字。
+
+```python
+b.put('a', names={'a': 'x'})  # 本地文件'a'，上传后的在七牛中的名字是'x'
+b.put('a', 'b', 'c', names={'a': 'x', 'b': 'y', 'c': 'z'}) # 上传后，'a','b','c'的名字分别为'x','y','z'
+b.put('a', 'b', 'c', names={'c': 'z'})  # 只改变'c'的名字为'z'，'a','b'不变
 ```
 
 #### 拷贝，移动（改名）
