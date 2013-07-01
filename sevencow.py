@@ -336,6 +336,10 @@ class Bucket(object):
     @transform_argument
     def put(self, *args, **kwargs):
         names = kwargs.get('names', None)
+        if names and not isinstance(names, dict):
+            raise TypeError(
+                "names Type error, Expected dict, But got Type of {0}".format(type(names))
+            )
         return self.cow.put(self.bucket, args[0], names=names)
 
     @transform_argument
