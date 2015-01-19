@@ -2,7 +2,7 @@
 
 另一个七牛云存储Python SDK
 
-此SDK目标是更容易的使用，完整功能的SDK请见 
+这是一个比官方更易用的SDK。 官方SDK请见 
 [![官方SDK](http://qiniutek.com/images/logo-2.png)](https://github.com/qiniu/python-sdk)
 
 ## Install
@@ -55,6 +55,9 @@ b.list_files()
 b.put('a')                    # 上传本地文件a，并且用a内容的MD5值作为上传后的名字
 b.put('a'， keep_name=True)   # 上传本地文件a，并且用a作为上传后的名字
 b.put('a', data=data)         # 把`data`数据上传，用`data`的MD5值作为上传后的名字
+                                这种的使用场景是你直接有了一个file-like的对象在内存中，
+                                比如通过浏览器上传的文件，
+                                此时你就不用把文件先写入磁盘，而是直接把文件内容读出，直接上传
 ```
 
 
