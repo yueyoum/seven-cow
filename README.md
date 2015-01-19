@@ -2,7 +2,8 @@
 
 另一个七牛云存储Python SDK
 
-此SDK目标是更容易的使用，完整功能的SDK请见 ![官方SDK](https://github.com/qiniu/python-sdk)
+此SDK目标是更容易的使用，完整功能的SDK请见 
+[![官方SDK](http://qiniutek.com/images/logo-2.png)](https://github.com/qiniu/python-sdk)
 
 ## Install
 
@@ -43,40 +44,39 @@ b.list_files()
 这个方法还有 marker, limit, prefix这三个可选参数，详情参考官方文档
 
 
-#### 上传，删除，查看文件信息
-
-这三种是一类操作，因为只要提供文件名即可
+#### 上传
 
 ```python
-b.put('a')                  # 上传单个文件
-b.put('a', 'b', 'c')        # 批量上传
+# Bucket.put(filename, data=None, keep_name=False, override=True)
+# filename:  文件名。 或者是从磁盘文件上传，就是文件路径
+# data:      如果从buffer中上传数据，就需要此参数。表示文件内容。
+# keep_name: 上传后的文件是否保持和filename一样。默认为False，用文件内容的MD5值
+# override:  上传同名文件，是否强制覆盖
+b.put('a')                    # 上传本地文件a，并且用a内容的MD5值作为上传后的名字
+b.put('a'， keep_name=True)   # 上传本地文件a，并且用a作为上传后的名字
+b.put('a', data=data)         # 把`data`数据上传，用`data`的MD5值作为上传后的名字
+```
+
+
+#### 删除，查看文件信息
+```python
 b.stat('a')                 # 查看单个文件信息
-b.stat('a', 'b', 'c')       # 批量查看
 b.delete('a')               # 删除单个文件
-b.delete('a', 'b', 'c')     # 批量删除
 ```
 
-默认情况下put上传是使用文件本身的名字作为上传后的名字(也就是在bucket中key)，
-但你也可以给put方法加一个`names`关键字参数来指定文件上传后应该是什么名字。
-
-```python
-b.put('a', names={'a': 'x'})  # 本地文件'a'，上传后的在七牛中的名字是'x'
-b.put('a', 'b', 'c', names={'a': 'x', 'b': 'y', 'c': 'z'}) # 上传后，'a','b','c'的名字分别为'x','y','z'
-b.put('a', 'b', 'c', names={'c': 'z'})  # 只改变'c'的名字为'z'，'a','b'不变
-```
 
 #### 拷贝，移动（改名）
 
-这两个操作都需要提供源文件名和目标文件名
+这两个操作需要提供源文件名和目标文件名
 
 ```python
 b.copy('a', 'b')                            # 将'a' 拷贝至'b'
-b.copy(('a', 'b'), ('c', 'd'), ('e', 'f'))  # 批量拷贝 'a' => 'b', 'c' => 'd', 'e' => 'f'
 b.move('a', 'b')                            # 将'a' 改名为'b'
-b.move(('a', 'b'), ('c', 'd'), ('e', 'f'))  # 批量改名 'a' => 'b', 'c' => 'd', 'e' => 'f'
 ```
 
 有没有觉得比官方SDK容易使用多呢？
+
+--------
 
 #### 异常
 
@@ -84,15 +84,14 @@ b.move(('a', 'b'), ('c', 'd'), ('e', 'f'))  # 批量改名 'a' => 'b', 'c' => 'd
 
 所以安全的做法是这样：
 
-```
+```python
 from sevencow import CowException
 
 try:
-    b.copy(('a', 'b'), ('c', 'd'))
+    b.put('a')
 except CowException as e:
     print e.url         # 出错的url
     print e.status_code # 返回码
-    print e.reason      # http error的原因
     print e.content     # api 错误的原因
 ```
 

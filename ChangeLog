@@ -1,8 +1,18 @@
-3013-07-01
+2015-01-19
 
-*	Version 0.1.2
-*	Add names key words argument in put method for change uploaded file name
+*   Version 0.2.0
+*   删除: 0.1.2版本中引入的 names 参数和功能
+*   删除: 批量操作。现在只支持单个文件操作
+*   修改: 默认用文件内容的MD5值作为上传文件名
+*   增加: put方法增加从buffer中直接上传数据
+*   增加: put方法增加override参数，默认为True，会强制覆盖同名文件
+
+
+2013-07-01
+
+*    Version 0.1.2
+*    Add names key words argument in put method for change uploaded file name
 
 2013-06-27
 
-*	Version 0.1.0, First release
+*    Version 0.1.0, First release

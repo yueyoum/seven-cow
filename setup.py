@@ -1,5 +1,7 @@
 from setuptools import setup
 
+import sevencow
+
 def long_description():
     try:
         return open('README.txt').read()
@@ -10,7 +12,7 @@ def long_description():
 
 setup(
     name = 'sevencow',
-    version = '0.1.2',
+    version = sevencow.VERSION,
     license = 'BSD',
     install_requires = ['requests'],
     py_modules = ['sevencow'],
